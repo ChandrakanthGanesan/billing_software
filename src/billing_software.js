@@ -1,15 +1,15 @@
-import { useState, useEffect, useContext} from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useContext } from 'react';
 import { ItemContext } from './ItemContext';
 import { Link } from 'react-router-dom';
+
 function BillingSoftware() {
-    const navigate = useNavigate();
     const [todayDate, setTodayDate] = useState('');
     const { items } = useContext(ItemContext);
     const [selectedItem, setSelectedItem] = useState(null);
     const [quantity, setQuantity] = useState('');
     const [tableData, setTableData] = useState([]);
     const [total, setTotal] = useState(0);
+    const [mobileNumber, setMobileNumber] = useState('');
 
     useEffect(() => {
         setTodayDate(new Date().toISOString().split('T')[0]);
@@ -25,7 +25,6 @@ function BillingSoftware() {
     }, [tableData]);
 
     function add() {
-
         if (!selectedItem || quantity <= 0 || quantity > 1000) {
             alert('Please select Item and Quantity between 1 and 1000');
             return;
@@ -51,39 +50,51 @@ function BillingSoftware() {
         const updatedTable = tableData.filter((_, i) => i !== index);
         setTableData(updatedTable);
     }
-    function handlePrint() {
 
-        if (tableData.length > 0) {
-            const confirmPayment = window.confirm("Have you received the UPI payment to 9585211433?");
-            if (confirmPayment) {
-                navigate('/invoice', { state: { tableData, total } });
-            } else {
-                alert("Print operation cancelled. Please confirm payment first.");
-            }
+    function sendWhatsAppInvoice() {
+        if (!mobileNumber.match(/^\d{10}$/)) {
+            alert('Please enter a valid 10-digit mobile number.');
+            return;
         }
-        else {
-            alert('Select the item')
+        if (tableData.length === 0) {
+            alert('No items added to invoice.');
+            return;
         }
 
+        let message = `🧾 *Invoice Details*\n\n`;
+        tableData.forEach((row, index) => {
+            message += `${index + 1}. ${row.itemName} - ${row.quantity} x ₹${row.rate} = ₹${row.totalprice}\n`;
+        });
+        message += `\n💰 *Total Amount: ₹${total}*`;
+        message += `\n📅 Date: ${todayDate}`;
+        message += `\n\nThank you for your purchase! 😊`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/91${mobileNumber}?text=${encodedMessage}`;
+
+        window.open(whatsappUrl, '_blank');
     }
+
     function clearBillingData() {
         setTableData([]);
         setTotal(0);
         localStorage.removeItem('billingData');
     }
+
     return (
-        <><nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div className="container">
-                <Link className="navbar-brand" to="/">Billing Software</Link>
-                <div className="collapse navbar-collapse">
-                    <ul className="navbar-nav ms-auto">
-                        <li className="nav-item">
-                            <Link className="nav-link" to="/admin">Admin Login</Link>
-                        </li>
-                    </ul>
+        <>
+            <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div className="container">
+                    <Link className="navbar-brand" to="/">Billing Software</Link>
+                    <div className="collapse navbar-collapse">
+                        <ul className="navbar-nav ms-auto">
+                            <li className="nav-item">
+                                <Link className="nav-link" to="/admin">Admin Login</Link>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
-        </nav>
+            </nav>
             <h1 style={{ color: 'brown' }}>Customer - Freight Link</h1>
             <div className="container mt-4">
                 <div className="card">
@@ -122,9 +133,20 @@ function BillingSoftware() {
                                 />
                             </div>
 
+                            <div className='col-6 mt-4'>
+                                <label>Mobile Number</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Enter mobile number"
+                                    value={mobileNumber}
+                                    onChange={(e) => setMobileNumber(e.target.value)}
+                                />
+                            </div>
+
                             <div className='mt-4'>
                                 <button onClick={add} className='btn btn-primary'>Add</button>
-                                <button onClick={handlePrint} className='btn btn-success ms-2'>Print</button>
+                                <button onClick={sendWhatsAppInvoice} className='btn btn-success ms-2'>Send Invoice</button>
                                 <button onClick={clearBillingData} className='btn btn-danger ms-2'>Clear</button>
                             </div>
 
